@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ReinforcementLearning
+namespace Sequence.Logic
 {
     enum Move
     {
@@ -15,7 +15,7 @@ namespace ReinforcementLearning
         Right,
     }
 
-    public class Learn
+    public class ReinforcementLearning
     {
         private Point _mapSize = new(4, 4);
         private Point _destination = new(4, 4);
@@ -42,9 +42,9 @@ namespace ReinforcementLearning
                     //set current coor
                     (next switch
                     {
-                        Move.Up => (Action)(() => { _current.Y--; }),
-                        Move.Down => (Action)(() => { _current.Y++; }),
-                        Move.Left => (Action)(() => { _current.X--; }),
+                        Move.Up => () => { _current.Y--; },
+                        Move.Down => () => { _current.Y++; },
+                        Move.Left => () => { _current.X--; },
                         Move.Right => (Action)(() => { _current.X++; }),
                         _ => throw new Exception()
                     })();
@@ -171,10 +171,10 @@ namespace ReinforcementLearning
                 }
 
                 //check map outside
-                if ((_current.X == 1 && move == Move.Left) ||
-                    (_current.Y == 1 && move == Move.Up) ||
-                    (_current.X == _mapSize.X && move == Move.Right) ||
-                    (_current.Y == _mapSize.Y && move == Move.Down))
+                if (_current.X == 1 && move == Move.Left ||
+                    _current.Y == 1 && move == Move.Up ||
+                    _current.X == _mapSize.X && move == Move.Right ||
+                    _current.Y == _mapSize.Y && move == Move.Down)
                 {
                     continue;
                 }

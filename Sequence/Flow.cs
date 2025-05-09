@@ -1,6 +1,5 @@
 ﻿using Common;
 using Common.Message;
-using Common.Config;
 using CommunityToolkit.Mvvm.Messaging;
 
 namespace Sequence
@@ -23,8 +22,7 @@ namespace Sequence
             try
             {
                 //do init
-                SettingData config = new();
-                config.Load();
+                
             }
             catch (Exception ex)
             {

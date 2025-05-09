@@ -1,5 +1,4 @@
 ﻿using Common;
-using Common.Config;
 using CommunityToolkit.Mvvm.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
