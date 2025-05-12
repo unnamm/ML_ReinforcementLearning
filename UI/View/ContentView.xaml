@@ -26,7 +26,7 @@
 
         <Grid Grid.Row="1">
             <ScrollViewer HorizontalAlignment="Center">
-                <ItemsControl ItemsSource="{Binding Coll}" HorizontalAlignment="Center" Margin="20,0">
+                <ItemsControl ItemsSource="{Binding CellCollection}" HorizontalAlignment="Center" Margin="20,0">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <UniformGrid Rows="{Binding MapY}" Columns="{Binding MapX}"/>
@@ -39,24 +39,24 @@
                                 <materialDesign:PackIcon Kind="{Binding Kind}" Width="25" Height="25" Margin="50" VerticalAlignment="Center"
                                                          Visibility="{Binding Position}"/>
 
-                                <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center"
+                                <StackPanel VerticalAlignment="Top"
                                             Visibility="{Binding UpArrow}">
-                                    <materialDesign:PackIcon Kind="ArrowUp"/>
-                                    <TextBlock Text="{Binding UpWeight}" FontSize="10"/>
+                                    <materialDesign:PackIcon Kind="ArrowUp" HorizontalAlignment="Center"/>
+                                    <TextBlock Text="{Binding UpWeight}" FontSize="10" HorizontalAlignment="Center"/>
                                 </StackPanel>
-                                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                <StackPanel VerticalAlignment="Bottom"
                                             Visibility="{Binding DownArrow}">
-                                    <TextBlock Text="{Binding DownWeight}" FontSize="10"/>
-                                    <materialDesign:PackIcon Kind="ArrowDown"/>
+                                    <TextBlock Text="{Binding DownWeight}" FontSize="10" HorizontalAlignment="Center"/>
+                                    <materialDesign:PackIcon Kind="ArrowDown" HorizontalAlignment="Center"/>
                                 </StackPanel>
                                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Orientation="Horizontal"
                                             Visibility="{Binding LeftArrow}">
                                     <materialDesign:PackIcon Kind="ArrowLeft"/>
-                                    <TextBlock Text="{Binding LeftWeight}" FontSize="10"/>
+                                    <TextBlock Text="{Binding LeftWeight}" FontSize="10" VerticalAlignment="Center"/>
                                 </StackPanel>
                                 <StackPanel VerticalAlignment="Center" HorizontalAlignment="Right" Orientation="Horizontal"
                                             Visibility="{Binding RightArrow}">
-                                    <TextBlock Text="{Binding RightWeight}" FontSize="10"/>
+                                    <TextBlock Text="{Binding RightWeight}" FontSize="10" VerticalAlignment="Center"/>
                                     <materialDesign:PackIcon Kind="ArrowRight"/>
                                 </StackPanel>
                             </Grid>
@@ -75,8 +75,13 @@
                 </StackPanel>
 
                 <Button Content="{Binding StartButton}" Margin="10" Command="{Binding StartAndStopCommand}"/>
-                <Button Content="Clear" Margin="10" Command="{Binding InitButtonCommand}"/>
+                <Button Content="Data Reset" Margin="10" Command="{Binding DataResetCommand}"/>
+
             </StackPanel>
+
+            <Button Content="All Clear" Margin="10" Command="{Binding InitButtonCommand}"
+                    VerticalAlignment="Bottom" HorizontalAlignment="Left"/>
+
         </Grid>
 
         <ListView Grid.Row="2" ItemsSource="{Binding LogInstance.LogList}" Background="Transparent"/>

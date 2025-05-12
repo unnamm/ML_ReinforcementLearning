@@ -11,10 +11,10 @@ using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Documents;
 using System.Windows.Media;
 using UI.Model;
 
@@ -24,63 +24,60 @@ namespace UI.ViewModel
     {
         private const string STOP = "Stop";
         private const string START = "Start";
-        private readonly SolidColorBrush OBSTACLE_COLOR = Brushes.Red;
+
+        private readonly SettingData _config = new(); //setting config
+        private readonly SolidColorBrush OBSTACLE_COLOR = Brushes.Red; //obstacle backgroud color
 
         public Log LogInstance { get; }
 
-        [ObservableProperty] private int _mapX;
-        [ObservableProperty] private int _mapY;
-        [ObservableProperty] private int _delay = 100;
-        [ObservableProperty] private int _repeat;
-        [ObservableProperty] private int _minDistance;
-        [ObservableProperty] private int _currentMoveCount;
-        [ObservableProperty] private string _startButton = string.Empty;
+        [ObservableProperty] private int _mapX; //map width size
+        [ObservableProperty] private int _mapY; //map height size
+        [ObservableProperty] private int _delay = 100; //current coordinate move delay
+        [ObservableProperty] private int _repeat; //goal repeat count
+        [ObservableProperty] private int _minDistance; //search min distance
+        [ObservableProperty] private int _currentMoveCount; //current move count in one search
+        [ObservableProperty] private string _startButton = string.Empty; //start <-> stop button name
 
-        private ReinforcementLearning _rl = new();
-        private CancellationTokenSource _cts = new();
+        private ReinforcementLearning _learn;
+        private CancellationTokenSource _cts = new(); //stop button token
 
-        public ObservableCollection<PathItem> Coll { get; } = [];
+        public ObservableCollection<PathItem> CellCollection { get; } = []; //cell width * height
 
         public ContentViewModel(Log log)
         {
             IsActive = true;
-
             LogInstance = log;
 
-            RefreshMap();
+            InitButton();
         }
 
         private void RefreshMap()
         {
-            StartButton = "Start";
+            _config.Load();
+
             Repeat = 0;
             MinDistance = 0;
+            StartButton = START;
             CurrentMoveCount = 0;
 
-            SettingData config = new();
-            config.Load();
+            MapX = _config.MapSizeX;
+            MapY = _config.MapSizeY;
 
-            MapX = config.MapSizeX;
-            MapY = config.MapSizeY;
-
-            Coll.Clear();
-            for (int i = 0; i < MapX * MapY; i++)
+            List<System.Drawing.Point> list = [];
+            foreach (var item in CellCollection)
             {
-                Coll.Add(new());
-                Coll[i].Coor = new(i % MapX, i / MapX);
-
-                if (Coll[i].Coor == new System.Drawing.Point(config.GoalX, config.GoalY))
+                if (item.Background == OBSTACLE_COLOR)
                 {
-                    Coll[i].Position = Visibility.Visible;
-                    Coll[i].Kind = MaterialDesignThemes.Wpf.PackIconKind.Adjust;
+                    list.Add(item.Coor);
                 }
             }
-            Coll[0].Position = Visibility.Visible;
+
+            _learn = new(new(MapX, MapY), new(_config.GoalX, _config.GoalY), list.ToArray());
         }
 
         public void Receive(SettingSaveMessage message)
         {
-            RefreshMap();
+            InitButton();
         }
 
         [RelayCommand]
@@ -90,19 +87,7 @@ namespace UI.ViewModel
             {
                 StartButton = STOP;
                 _cts = new();
-                SettingData config = new();
-                config.Load();
 
-                List<System.Drawing.Point> list = [];
-                foreach (var item in Coll)
-                {
-                    if (item.Background == OBSTACLE_COLOR)
-                    {
-                        list.Add(item.Coor);
-                    }
-                }
-
-                _rl.Init(new(MapX, MapY), new(config.GoalX, config.GoalY), list.ToArray());
                 Run();
             }
             else
@@ -114,9 +99,46 @@ namespace UI.ViewModel
         [RelayCommand]
         public void InitButton()
         {
-            _rl = new();
             Cancel();
             RefreshMap();
+
+            CellCollection.Clear();
+            for (int i = 0; i < MapX * MapY; i++)
+            {
+                CellCollection.Add(new());
+                CellCollection[i].Coor = new(i % MapX, i / MapX);
+
+                if (CellCollection[i].Coor == new System.Drawing.Point(_config.GoalX, _config.GoalY))
+                {
+                    CellCollection[i].Position = Visibility.Visible;
+                    CellCollection[i].Kind = MaterialDesignThemes.Wpf.PackIconKind.Adjust;
+                }
+            }
+            CellCollection[0].Position = Visibility.Visible;
+        }
+
+        [RelayCommand]
+        public void DataReset()
+        {
+            Cancel();
+            RefreshMap();
+
+            foreach (var item in CellCollection)
+            {
+                if (item.Coor == new System.Drawing.Point(_config.GoalX, _config.GoalY))
+                {
+                    item.Position = Visibility.Visible;
+                }
+                else
+                {
+                    item.Position = Visibility.Hidden;
+                }
+                item.UpArrow = Visibility.Hidden;
+                item.DownArrow = Visibility.Hidden;
+                item.LeftArrow = Visibility.Hidden;
+                item.RightArrow = Visibility.Hidden;
+            }
+            CellCollection[0].Position = Visibility.Visible;
         }
 
         private void Cancel()
@@ -125,42 +147,45 @@ namespace UI.ViewModel
             StartButton = START;
         }
 
+        /// <summary>
+        /// repeat all
+        /// </summary>
         private async void Run()
         {
             try
             {
-                while (true) //init
+                while (true) //repeat search
                 {
-                    _rl.SetStartPos();
-                    CurrentMoveCount = 0;
-
-                    while (true) //move next
+                    while (true) //repeat next move
                     {
                         await Task.Delay(Delay);
                         _cts.Token.ThrowIfCancellationRequested();
 
-                        var (IsGoal, Direction, Coor) = _rl.Next();
+                        var (IsGoal, Coor) = _learn.Next();
 
-                        foreach (var item in Coll)
+                        CurrentMoveCount = _learn.GetMoveCount();
+
+                        foreach (var item in CellCollection)
                         {
                             if (item.Kind != MaterialDesignThemes.Wpf.PackIconKind.Adjust)
                             {
                                 item.Position = Visibility.Hidden;
                             }
+
+                            if (item.Coor == Coor)
+                            {
+                                item.Position = Visibility.Visible;
+                            }
                         }
-
-                        Coll[Coor.X + Coor.Y * MapX].Position = Visibility.Visible; //current coor
-
-                        CurrentMoveCount++;
 
                         if (IsGoal)
                         {
                             Repeat++;
-                            MinDistance = _rl.GetMinDistance()!.Value;
-                            Coll[0].Position = Visibility.Visible;
+                            MinDistance = _learn.GetMinDistance()!.Value;
+                            CellCollection[0].Position = Visibility.Visible;
 
-                            var q = _rl.GetQValue();
-                            foreach (var item in Coll)
+                            var q = _learn.GetQValue();
+                            foreach (var item in CellCollection)
                             {
                                 q.TryGetValue(item.Coor, out var pair);
                                 if (pair == null)
@@ -230,7 +255,7 @@ namespace UI.ViewModel
 
         public void Receive(CellMouseRightClickMessage message)
         {
-            if (_rl.GetMoveCount() != 0)
+            if (_learn.GetMoveCount() != 0 || _learn.GetMinDistance() != null)
             {
                 LogInstance.Write("obstacle can only be added in initialize state");
                 return;
@@ -244,6 +269,16 @@ namespace UI.ViewModel
             {
                 message.Item.Background = OBSTACLE_COLOR;
             }
+
+            List<System.Drawing.Point> list = [];
+            foreach (var item in CellCollection)
+            {
+                if (item.Background == OBSTACLE_COLOR)
+                {
+                    list.Add(item.Coor);
+                }
+            }
+            _learn = new(new(MapX, MapY), new(_config.GoalX, _config.GoalY), list.ToArray());
         }
     }
 }

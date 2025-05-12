@@ -17,27 +17,20 @@ namespace Sequence.Logic
 
     public class ReinforcementLearning
     {
-        private Point _mapSize = new(4, 4);
-        private Point _destination = new(4, 4);
-
         private Point _current; //current coor
+        private Point _mapSize;
+        private Point _destination;
         private (int? min, int score) _scoreData = (null, 10); //weight score
-        private Point[] _obstacle = [];
+
+        private readonly Point[] _obstacle = [];
         private readonly List<(Point, Move)> _record = []; //record path taken
         private readonly Dictionary<Point, Dictionary<Move, int?>> _qValue = []; //all weight by coor by direction
 
-        public void Init(Point mapSize, Point destination, Point[] obstacle)
+        public ReinforcementLearning(Point mapSize, Point destination, Point[] obstacle)
         {
             _mapSize = mapSize;
             _obstacle = obstacle;
             _destination = destination;
-            _current = new();
-        }
-
-        public void SetStartPos()
-        {
-            _record.Clear();
-            _current = new();
         }
 
         public int GetMoveCount() => _record.Count;
@@ -46,11 +39,11 @@ namespace Sequence.Logic
 
         public Dictionary<Point, Dictionary<Move, int?>> GetQValue() => _qValue;
 
-        public (bool IsGoal, Move? Direction, Point Coor) Next()
+        public (bool IsGoal, Point Coor) Next()
         {
             if (_current == _destination)
             {
-                return (true, null, _destination);
+                return (true, _destination);
             }
 
             var next = NextMove();
@@ -69,7 +62,8 @@ namespace Sequence.Logic
                 _ => throw new Exception()
             })();
 
-            if (_current == _destination)
+            bool isGoal = _current == _destination;
+            if (isGoal)
             {
                 var score = 10; //weight score
 
@@ -133,9 +127,12 @@ namespace Sequence.Logic
                     }
                     _qValue.TryAdd(recordData.Item1, dic);
                 }
+
+                _record.Clear();
+                _current = new();
             }
 
-            return (_current == _destination, next, _current);
+            return (isGoal, _current);
         }
 
         private Move NextMove()
