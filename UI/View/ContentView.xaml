@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:UI.View"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
@@ -16,10 +17,68 @@
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
             <RowDefinition/>
-            <RowDefinition/>
+            <RowDefinition Height="150"/>
         </Grid.RowDefinitions>
 
-        <ListView Grid.Row="1" ItemsSource="{Binding LogInstance.LogList}" Background="Transparent"/>
+        <TextBlock Grid.Row="0" Text="Mouse Right Click make Obstacle" Margin="10,0" HorizontalAlignment="Center"/>
+
+        <Grid Grid.Row="1">
+            <ScrollViewer HorizontalAlignment="Center">
+                <ItemsControl ItemsSource="{Binding Coll}" HorizontalAlignment="Center" Margin="20,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Rows="{Binding MapY}" Columns="{Binding MapX}"/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="1" Background="{Binding Background}" MouseRightButtonDown="Grid_MouseRightButtonDown">
+                                <Border BorderThickness="1" BorderBrush="Black"/>
+                                <materialDesign:PackIcon Kind="{Binding Kind}" Width="25" Height="25" Margin="50" VerticalAlignment="Center"
+                                                         Visibility="{Binding Position}"/>
+
+                                <StackPanel VerticalAlignment="Top" HorizontalAlignment="Center"
+                                            Visibility="{Binding UpArrow}">
+                                    <materialDesign:PackIcon Kind="ArrowUp"/>
+                                    <TextBlock Text="{Binding UpWeight}" FontSize="10"/>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center"
+                                            Visibility="{Binding DownArrow}">
+                                    <TextBlock Text="{Binding DownWeight}" FontSize="10"/>
+                                    <materialDesign:PackIcon Kind="ArrowDown"/>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Left" Orientation="Horizontal"
+                                            Visibility="{Binding LeftArrow}">
+                                    <materialDesign:PackIcon Kind="ArrowLeft"/>
+                                    <TextBlock Text="{Binding LeftWeight}" FontSize="10"/>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Right" Orientation="Horizontal"
+                                            Visibility="{Binding RightArrow}">
+                                    <TextBlock Text="{Binding RightWeight}" FontSize="10"/>
+                                    <materialDesign:PackIcon Kind="ArrowRight"/>
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <StackPanel Margin="5,0" HorizontalAlignment="Left">
+                <TextBlock Text="{Binding Repeat, StringFormat=repeat: {0}}" Margin="10"/>
+                <TextBlock Text="{Binding CurrentMoveCount, StringFormat=move count: {0}}" Margin="10"/>
+                <TextBlock Text="{Binding MinDistance, StringFormat=min distance: {0}}" Margin="10"/>
+                <StackPanel Orientation="Horizontal" Margin="10">
+                    <TextBlock Text="Delay:" VerticalAlignment="Center"/>
+                    <TextBox Text="{Binding Delay}" Width="50" HorizontalContentAlignment="Center"/>
+                    <TextBlock Text="ms" VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <Button Content="{Binding StartButton}" Margin="10" Command="{Binding StartAndStopCommand}"/>
+                <Button Content="Clear" Margin="10" Command="{Binding InitButtonCommand}"/>
+            </StackPanel>
+        </Grid>
+
+        <ListView Grid.Row="2" ItemsSource="{Binding LogInstance.LogList}" Background="Transparent"/>
     </Grid>
 </UserControl>

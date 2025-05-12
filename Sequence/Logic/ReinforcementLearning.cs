@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Sequence.Logic
 {
-    enum Move
+    public enum Move
     {
         Up,
         Down,
@@ -19,89 +19,123 @@ namespace Sequence.Logic
     {
         private Point _mapSize = new(4, 4);
         private Point _destination = new(4, 4);
+
         private Point _current; //current coor
         private (int? min, int score) _scoreData = (null, 10); //weight score
-        private Point[] _obstacle = [new(3, 3), new(4, 3)]; //obstacle coor
-        private List<(Point, Move)> _record = []; //record path taken
-        private Dictionary<Point, Dictionary<Move, int?>> _qValue = []; //all weight by coor by direction
+        private Point[] _obstacle = [];
+        private readonly List<(Point, Move)> _record = []; //record path taken
+        private readonly Dictionary<Point, Dictionary<Move, int?>> _qValue = []; //all weight by coor by direction
 
-        public void Run()
+        public void Init(Point mapSize, Point destination, Point[] obstacle)
         {
-            int repeatCount = 0;
-            while (true)
+            _mapSize = mapSize;
+            _obstacle = obstacle;
+            _destination = destination;
+            _current = new();
+        }
+
+        public void SetStartPos()
+        {
+            _record.Clear();
+            _current = new();
+        }
+
+        public int GetMoveCount() => _record.Count;
+
+        public int? GetMinDistance() => _scoreData.min;
+
+        public Dictionary<Point, Dictionary<Move, int?>> GetQValue() => _qValue;
+
+        public (bool IsGoal, Move? Direction, Point Coor) Next()
+        {
+            if (_current == _destination)
             {
-                repeatCount++;
-                _record.Clear();
-                _current = new(1, 1);
+                return (true, null, _destination);
+            }
 
-                while (true)
+            var next = NextMove();
+            _record.Add((_current, next));
+
+            //set current coor
+            (next switch
+            {
+                Move.Up => () => { _current.Y--; }
+                ,
+                Move.Down => () => { _current.Y++; }
+                ,
+                Move.Left => () => { _current.X--; }
+                ,
+                Move.Right => (Action)(() => { _current.X++; }),
+                _ => throw new Exception()
+            })();
+
+            if (_current == _destination)
+            {
+                var score = 10; //weight score
+
+                if (_scoreData.min == null) //first arrive
                 {
-                    var next = NextMove();
-                    _record.Add((_current, next));
-
-                    //set current coor
-                    (next switch
+                    _scoreData.min = _record.Count;
+                }
+                else
+                {
+                    if (_scoreData.min > _record.Count) //short record
                     {
-                        Move.Up => () => { _current.Y--; },
-                        Move.Down => () => { _current.Y++; },
-                        Move.Left => () => { _current.X--; },
-                        Move.Right => (Action)(() => { _current.X++; }),
-                        _ => throw new Exception()
-                    })();
+                        _scoreData.score += (_scoreData.min - _record.Count).Value; //plus shortened record
+                        _scoreData.min = _record.Count; //set min record
 
-                    //arrive
-                    if (_current.X == _destination.X && _current.Y == _destination.Y)
-                    {
-                        var score = 10; //weight score
+                        score = _scoreData.score;
 
-                        if (_scoreData.min == null) //first arrive
+                        List<int> maxList = [];
+                        foreach (var item in _qValue.Values)
                         {
-                            _scoreData.min = _record.Count;
+                            maxList.Add(item.Values.Max() ?? 0);
+                        }
+                        score += maxList.Max();
+                    }
+                    else if (_scoreData.min == _record.Count) //same record
+                    {
+                        _scoreData.score += 10; //same record is plus weight
+
+                        score = _scoreData.score;
+                    }
+                }
+
+                //distinct
+                List<(Point, Move)> distinctRecord = [];
+                foreach (var item in _record)
+                {
+                    if (distinctRecord.Any(x => x.Item1 == item.Item1 && x.Item2 == item.Item2) == false)
+                    {
+                        distinctRecord.Add(item);
+                    }
+                }
+
+                foreach (var recordData in distinctRecord)
+                {
+                    _qValue.TryGetValue(recordData.Item1, out var dic);
+                    if (dic == null)
+                    {
+                        dic = [];
+                        dic.Add(recordData.Item2, score);
+                    }
+                    else
+                    {
+                        dic.TryGetValue(recordData.Item2, out var value);
+                        if (value == null)
+                        {
+                            dic.Add(recordData.Item2, score);
                         }
                         else
                         {
-                            if (_scoreData.min > _record.Count) //short record
-                            {
-                                _scoreData.score += (_scoreData.min - _record.Count).Value; //plus shortened record
-                                _scoreData.min = _record.Count; //set min record
-
-                                score = _scoreData.score;
-                            }
-                            else if (_scoreData.min == _record.Count) //same record
-                            {
-                                _scoreData.score += 10; //same record is plus weight
-
-                                score = _scoreData.score;
-                            }
+                            dic[recordData.Item2] += score;
                         }
-
-                        foreach (var recordData in _record)
-                        {
-                            _qValue.TryGetValue(recordData.Item1, out var dic);
-                            if (dic == null)
-                            {
-                                dic = [];
-                                dic.Add(recordData.Item2, score);
-                            }
-                            else
-                            {
-                                dic.TryGetValue(recordData.Item2, out var value);
-                                if (value == null)
-                                {
-                                    dic.Add(recordData.Item2, score);
-                                }
-                                else //already weight is average
-                                {
-                                    dic[recordData.Item2] = (score + value) / 2;
-                                }
-                            }
-                            _qValue.TryAdd(recordData.Item1, dic);
-                        }
-
-                        break;
                     }
+                    _qValue.TryAdd(recordData.Item1, dic);
                 }
             }
+
+            return (_current == _destination, next, _current);
         }
 
         private Move NextMove()
@@ -171,10 +205,10 @@ namespace Sequence.Logic
                 }
 
                 //check map outside
-                if (_current.X == 1 && move == Move.Left ||
-                    _current.Y == 1 && move == Move.Up ||
-                    _current.X == _mapSize.X && move == Move.Right ||
-                    _current.Y == _mapSize.Y && move == Move.Down)
+                if (_current.X == 0 && move == Move.Left ||
+                    _current.Y == 0 && move == Move.Up ||
+                    _current.X == _mapSize.X - 1 && move == Move.Right ||
+                    _current.Y == _mapSize.Y - 1 && move == Move.Down)
                 {
                     continue;
                 }

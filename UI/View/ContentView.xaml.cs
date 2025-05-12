@@ -12,6 +12,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using CommunityToolkit.Mvvm.Messaging;
+using UI.Model;
 
 namespace UI.View
 {
@@ -20,6 +22,13 @@ namespace UI.View
         public ContentView()
         {
             InitializeComponent();
+        }
+
+        private void Grid_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            var grid = (Grid)sender;
+            var item = (PathItem)grid.DataContext;
+            WeakReferenceMessenger.Default.Send(new CellMouseRightClickMessage(item));
         }
     }
 }

@@ -40,6 +40,7 @@ namespace UI.ViewModel
             }
             await Task.WhenAll(list);
 
+            WeakReferenceMessenger.Default.Send(new SettingSaveMessage());
             WeakReferenceMessenger.Default.Send(new DialogMessage("Message", "all config save complete"));
         }
 

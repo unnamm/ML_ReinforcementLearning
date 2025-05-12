@@ -1,2 +1,4 @@
 MapSizeX: 4
-MapSizeY: 5
+MapSizeY: 4
+GoalX: 3
+GoalY: 3

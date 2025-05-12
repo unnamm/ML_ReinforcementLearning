@@ -16,6 +16,12 @@ namespace Common.Config
         [SettingMember("MapSizeY", ConvertType.Text)]
         public int MapSizeY { get; set; }
 
+        [SettingMember("GoalX", ConvertType.Text)]
+        public int GoalX { get; set; }
+
+        [SettingMember("GoalY", ConvertType.Text)]
+        public int GoalY { get; set; }
+
         //[SettingMember("item2", ConvertType.Combo, ["select1", "select2"])]
         //public string? Mode { get; set; } = "select1";
 
