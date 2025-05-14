@@ -17,14 +17,23 @@ namespace Sequence.Logic
 
     public class ReinforcementLearning
     {
+        #region Set Custom Value
         private const int INIT_SCORE = 10;
+        private const int GOAL_SCORE = 40;
+        private const int SAME_GOAL_SCORE = 100;
+
+        private static int GetScoreNextRecord(int before)
+        {
+            return before / 2;
+            //return before - 5;
+        }
+        #endregion
 
         private int _repeat;
         private int? _minDistance;
         private Point _mapSize;
         private Point _currentCoor;
         private Point _destination;
-
         private readonly Point[] _obstacles = [];
         private readonly List<(Point, Move)> _record = []; //record path taken
         private readonly List<(Point Coor, int Distance)> _expandGoal = [];
@@ -44,7 +53,6 @@ namespace Sequence.Logic
         public int? GetMinDistance() => _minDistance;
         public bool IsComplete() => _expandGoal.FindAll(x => x.Coor == _currentCoor).Count > 0;
         public Point[] GetGoals() => _expandGoal.Select(x => x.Coor).ToArray();
-
         public Dictionary<Point, Dictionary<Move, int?>> GetQValue() => _qValue;
 
         public (bool IsGoal, Point Coor) Next()
@@ -61,30 +69,27 @@ namespace Sequence.Logic
             _currentCoor = MoveNext(_currentCoor, next);
 
             isGoal = IsComplete();
-            //bool isGoal = _currentCoor == _destination;
             if (isGoal)
             {
-                var score = INIT_SCORE * 5; //weight score
-                var data = _expandGoal.Find(x => x.Coor == _currentCoor);
+                var score = GOAL_SCORE; //weight score
+                var (Coor, Distance) = _expandGoal.Find(x => x.Coor == _currentCoor);
 
                 if (_minDistance == null) //first arrive
                 {
-                    _minDistance = _record.Count + data.Distance;
+                    _minDistance = _record.Count + Distance;
                 }
                 else
                 {
-                    if (_minDistance > _record.Count + data.Distance) //short record
+                    if (_minDistance > _record.Count + Distance) //short record
                     {
-                        _minDistance = _record.Count + data.Distance;
-                        score = GetMaxQValue();
+                        _minDistance = _record.Count + Distance;
+                        score = GetMaxQValue(); //set max value is score
                     }
-                    else if (_minDistance == _record.Count + data.Distance) //same record
+                    else if (_minDistance == _record.Count + Distance) //same record
                     {
-                        score = INIT_SCORE * 10;
+                        score = SAME_GOAL_SCORE;
                     }
                 }
-
-
 
                 _record.Reverse();
                 var list = _record.Distinct();
@@ -92,8 +97,6 @@ namespace Sequence.Logic
                 //closer record give more weight
                 foreach (var recordData in list)
                 {
-                    const int DEVIDE = 2;
-
                     _qValue.TryGetValue(recordData.Item1, out var dic);
                     if (dic == null)
                     {
@@ -103,7 +106,7 @@ namespace Sequence.Logic
                         }
                         dic = [];
                         dic.Add(recordData.Item2, score);
-                        score /= DEVIDE;
+                        score = GetScoreNextRecord(score);
                     }
                     else
                     {
@@ -115,7 +118,7 @@ namespace Sequence.Logic
                                 break;
                             }
                             dic.Add(recordData.Item2, score);
-                            score /= DEVIDE;
+                            score = GetScoreNextRecord(score);
                         }
                         else
                         {
@@ -124,7 +127,7 @@ namespace Sequence.Logic
                                 break;
                             }
                             dic[recordData.Item2] += score;
-                            score /= DEVIDE;
+                            score = GetScoreNextRecord(score);
                         }
                     }
                     _qValue.TryAdd(recordData.Item1, dic);
@@ -169,6 +172,7 @@ namespace Sequence.Logic
             return (isGoal, _currentCoor);
         }
 
+
         private static Point MoveNext(Point point, Move next)
         {
             Point add = next switch
@@ -200,7 +204,7 @@ namespace Sequence.Logic
 
         private Move NextMove()
         {
-            while (true)
+            while (true) //search next direction
             {
                 _qValue.TryGetValue(_currentCoor, out var dic); //get move weights from current coor
 

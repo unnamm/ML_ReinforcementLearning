@@ -14,22 +14,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Documents;
 using System.Windows.Media;
 using UI.Model;
-using static MaterialDesignThemes.Wpf.Theme.ToolBar;
 
 namespace UI.ViewModel
 {
-    public partial class ContentViewModel : ObservableRecipient, IRecipient<SettingSaveMessage>, IRecipient<CellMouseRightClickMessage>
+    public partial class ContentViewModel : ObservableRecipient,
+        IRecipient<SettingSaveMessage>, IRecipient<CellMouseRightClickMessage>
     {
         private const string STOP = "Stop";
         private const string START = "Start";
-
-        private readonly SettingData _config = new(); //setting config
         private readonly SolidColorBrush OBSTACLE_COLOR = Brushes.Red; //obstacle backgroud color
 
-        public Log LogInstance { get; }
+        private readonly SettingData _config = new(); //setting config
 
         [ObservableProperty] private int _mapX; //map width size
         [ObservableProperty] private int _mapY; //map height size
@@ -42,6 +39,7 @@ namespace UI.ViewModel
         private ReinforcementLearning _learn;
         private CancellationTokenSource _cts = new(); //stop button token
 
+        public Log LogInstance { get; }
         public ObservableCollection<PathItem> CellCollection { get; } = []; //cell width * height
 
         public ContentViewModel(Log log)
@@ -52,42 +50,13 @@ namespace UI.ViewModel
             InitButton();
         }
 
-        private void RefreshMap()
-        {
-            _config.Load();
-
-            Repeat = 0;
-            MinDistance = 0;
-            StartButton = START;
-            CurrentMoveCount = 0;
-
-            MapX = _config.MapSizeX;
-            MapY = _config.MapSizeY;
-
-            List<System.Drawing.Point> list = [];
-            foreach (var item in CellCollection)
-            {
-                if (item.Background == OBSTACLE_COLOR)
-                {
-                    list.Add(item.Coor);
-                }
-            }
-
-            _learn = new(new(MapX, MapY), new(_config.GoalX, _config.GoalY), list.ToArray());
-        }
-
-        public void Receive(SettingSaveMessage message)
-        {
-            InitButton();
-        }
-
         [RelayCommand]
         public void StartAndStop()
         {
             if (StartButton == START)
             {
-                StartButton = STOP;
                 _cts = new();
+                StartButton = STOP;
 
                 Run();
             }
@@ -97,6 +66,9 @@ namespace UI.ViewModel
             }
         }
 
+        /// <summary>
+        /// all reset and init
+        /// </summary>
         [RelayCommand]
         public void InitButton()
         {
@@ -119,6 +91,9 @@ namespace UI.ViewModel
             CellCollection[0].Kind = PathItem.PLAYER;
         }
 
+        /// <summary>
+        /// reset only record data
+        /// </summary>
         [RelayCommand]
         public void DataReset()
         {
@@ -143,6 +118,27 @@ namespace UI.ViewModel
             CellCollection[0].Position = Visibility.Visible;
         }
 
+        private void RefreshMap()
+        {
+            _config.Load();
+
+            Repeat = 0;
+            MinDistance = 0;
+            StartButton = START;
+            CurrentMoveCount = 0;
+
+            MapX = _config.MapSizeX;
+            MapY = _config.MapSizeY;
+
+            SetLogic();
+        }
+
+        private void SetLogic()
+        {
+            _learn = new(new(MapX, MapY), new(_config.GoalX, _config.GoalY),
+                CellCollection.Where(x => x.Background == OBSTACLE_COLOR).Select(x => x.Coor).ToArray());
+        }
+
         private void Cancel()
         {
             _cts.Cancel();
@@ -154,7 +150,7 @@ namespace UI.ViewModel
         /// </summary>
         private async void Run()
         {
-            //try
+            try
             {
                 while (true) //repeat search
                 {
@@ -167,30 +163,31 @@ namespace UI.ViewModel
                     while (true) //repeat next move
                     {
                         await Task.Delay(Delay);
+
+                        //stop
                         try
                         {
                             _cts.Token.ThrowIfCancellationRequested();
                         }
-                        catch (Exception)
+                        catch (OperationCanceledException)
                         {
                             return;
                         }
 
-                        var (IsGoal, Coor) = _learn.Next();
-
+                        var (IsGoal, Coor) = _learn.Next(); //play next move
                         CurrentMoveCount = _learn.GetMoveCount();
 
                         foreach (var item in CellCollection)
                         {
                             item.Position = Visibility.Hidden;
 
-                            if (_learn.GetGoals().Contains(item.Coor))
+                            if (_learn.GetGoals().Contains(item.Coor)) //show goal position
                             {
                                 item.Kind = PathItem.GOAL;
                                 item.Position = Visibility.Visible;
                             }
 
-                            if (item.Coor == Coor)
+                            if (item.Coor == Coor) //show current player position
                             {
                                 item.Kind = PathItem.PLAYER;
                                 item.Position = Visibility.Visible;
@@ -199,10 +196,11 @@ namespace UI.ViewModel
 
                         if (IsGoal)
                         {
-                            Repeat = _learn.GetRepeat();
+                            Repeat = _learn.GetRepeat(); //number of reached goal
                             MinDistance = _learn.GetMinDistance() ?? 0;
-                            CellCollection[0].Position = Visibility.Visible;
+                            CellCollection[0].Position = Visibility.Visible; //player show init position
 
+                            //show next move weight
                             var q = _learn.GetQValue();
                             foreach (var item in CellCollection)
                             {
@@ -266,10 +264,15 @@ namespace UI.ViewModel
                     }
                 }
             }
-            //catch (Exception ex)
-            //{
-            //    LogInstance.Write(ex.Message);
-            //}
+            catch (Exception ex)
+            {
+                LogInstance.Write(ex.Message);
+            }
+        }
+
+        public void Receive(SettingSaveMessage message)
+        {
+            InitButton();
         }
 
         public void Receive(CellMouseRightClickMessage message)
@@ -280,6 +283,7 @@ namespace UI.ViewModel
                 return;
             }
 
+            //change background color
             if (message.Item.Background == OBSTACLE_COLOR)
             {
                 message.Item.Background = Brushes.Transparent;
@@ -289,15 +293,7 @@ namespace UI.ViewModel
                 message.Item.Background = OBSTACLE_COLOR;
             }
 
-            List<System.Drawing.Point> list = [];
-            foreach (var item in CellCollection)
-            {
-                if (item.Background == OBSTACLE_COLOR)
-                {
-                    list.Add(item.Coor);
-                }
-            }
-            _learn = new(new(MapX, MapY), new(_config.GoalX, _config.GoalY), list.ToArray());
+            SetLogic();
         }
     }
 }
