@@ -17,6 +17,7 @@ using System.Windows;
 using System.Windows.Documents;
 using System.Windows.Media;
 using UI.Model;
+using static MaterialDesignThemes.Wpf.Theme.ToolBar;
 
 namespace UI.ViewModel
 {
@@ -115,6 +116,7 @@ namespace UI.ViewModel
                 }
             }
             CellCollection[0].Position = Visibility.Visible;
+            CellCollection[0].Kind = PathItem.PLAYER;
         }
 
         [RelayCommand]
@@ -152,14 +154,27 @@ namespace UI.ViewModel
         /// </summary>
         private async void Run()
         {
-            try
+            //try
             {
                 while (true) //repeat search
                 {
+                    if (_learn.IsComplete())
+                    {
+                        LogInstance.Write("Complete");
+                        Cancel();
+                    }
+
                     while (true) //repeat next move
                     {
                         await Task.Delay(Delay);
-                        _cts.Token.ThrowIfCancellationRequested();
+                        try
+                        {
+                            _cts.Token.ThrowIfCancellationRequested();
+                        }
+                        catch (Exception)
+                        {
+                            return;
+                        }
 
                         var (IsGoal, Coor) = _learn.Next();
 
@@ -167,21 +182,25 @@ namespace UI.ViewModel
 
                         foreach (var item in CellCollection)
                         {
-                            if (item.Kind != MaterialDesignThemes.Wpf.PackIconKind.Adjust)
+                            item.Position = Visibility.Hidden;
+
+                            if (_learn.GetGoals().Contains(item.Coor))
                             {
-                                item.Position = Visibility.Hidden;
+                                item.Kind = PathItem.GOAL;
+                                item.Position = Visibility.Visible;
                             }
 
                             if (item.Coor == Coor)
                             {
+                                item.Kind = PathItem.PLAYER;
                                 item.Position = Visibility.Visible;
                             }
                         }
 
                         if (IsGoal)
                         {
-                            Repeat++;
-                            MinDistance = _learn.GetMinDistance()!.Value;
+                            Repeat = _learn.GetRepeat();
+                            MinDistance = _learn.GetMinDistance() ?? 0;
                             CellCollection[0].Position = Visibility.Visible;
 
                             var q = _learn.GetQValue();
@@ -247,10 +266,10 @@ namespace UI.ViewModel
                     }
                 }
             }
-            catch (Exception ex)
-            {
-                LogInstance.Write(ex.Message);
-            }
+            //catch (Exception ex)
+            //{
+            //    LogInstance.Write(ex.Message);
+            //}
         }
 
         public void Receive(CellMouseRightClickMessage message)

@@ -12,6 +12,9 @@ namespace UI.Model
 {
     public partial class PathItem : ObservableObject
     {
+        public const PackIconKind PLAYER = PackIconKind.Accessibility;
+        public const PackIconKind GOAL = PackIconKind.Adjust;
+
         [ObservableProperty] private Visibility _upArrow = Visibility.Hidden;
         [ObservableProperty] private Visibility _downArrow = Visibility.Hidden;
         [ObservableProperty] private Visibility _leftArrow = Visibility.Hidden;
@@ -23,7 +26,7 @@ namespace UI.Model
         [ObservableProperty] private int _rightWeight;
 
         [ObservableProperty] private Visibility _position = Visibility.Hidden;
-        [ObservableProperty] private PackIconKind _kind = PackIconKind.Accessibility;
+        [ObservableProperty] private PackIconKind _kind;
         [ObservableProperty] private SolidColorBrush _background = Brushes.Transparent;
 
         public System.Drawing.Point Coor;

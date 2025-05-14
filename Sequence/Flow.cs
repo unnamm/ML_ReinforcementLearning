@@ -22,7 +22,7 @@ namespace Sequence
             try
             {
                 //do init
-                
+                await Task.Delay(10);
             }
             catch (Exception ex)
             {
